@@ -1,120 +1,162 @@
-
-// components/Start.js
-
 import React, { useState } from 'react';
 import {
+  StyleSheet,
   View,
   Text,
   TextInput,
-  StyleSheet,
-  ImageBackground,
   TouchableOpacity,
+  ImageBackground, // Import ImageBackground
+  Alert, // For basic validation feedback
 } from 'react-native';
-
-// The background image for the start screen
-const bgImage = require('../assets/background-image.png');
 
 const Start = ({ navigation }) => {
   const [name, setName] = useState('');
-  const [bgColor, setBgColor] = useState('#FFFFFF');
+  const [backgroundColor, setBackgroundColor] = useState('#090C08'); // Default color
 
-  // Preset colors
-  const colors = ['#090C08', '#474056', '#8A95A5', '#B9C6AE'];
+  // Array of background color options as per brief
+  const colors = [
+    '#090C08', // Black
+    '#474056', // Purple
+    '#8A95A5', // Grey
+    '#B9C6AE', // Greenish-Grey
+  ];
+
+  const handleStartChatting = () => {
+    if (name.trim() === '') {
+      Alert.alert('Please enter your name to start chatting!');
+    } else {
+      // Navigate to Chat screen, passing name and chosen background color
+      navigation.navigate('Chat', { name: name.trim(), backgroundColor: backgroundColor });
+    }
+  };
 
   return (
-    <ImageBackground source={bgImage} style={styles.background}>
+    <ImageBackground
+      source={require('../assets/images/react-logo.png')} // <<== REPLACE WITH YOUR ACTUAL IMAGE PATH
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
       <View style={styles.container}>
-        <Text style={styles.title}>Chat App</Text>
+        {/* App Title */}
+        <Text style={styles.appTitle}>ChatApp</Text>
 
-        <View style={styles.inputBox}>
+        {/* Input and Options Box */}
+        <View style={styles.inputOptionsBox}>
+          {/* Your Name Input */}
           <TextInput
-            style={styles.input}
+            style={styles.nameInput}
             value={name}
             onChangeText={setName}
-            placeholder="Your Name"
+            placeholder="Your name"
+            placeholderTextColor="#757083" // 50% opacity color
           />
-        </View>
 
-        <Text style={styles.colorLabel}>Choose Background Color:</Text>
-        <View style={styles.colorOptions}>
-          {colors.map((color) => (
-            <TouchableOpacity
-              key={color}
-              style={[styles.colorCircle, { backgroundColor: color }, bgColor === color && styles.colorSelected]}
-              onPress={() => setBgColor(color)}
-            />
-          ))}
-        </View>
+          {/* Choose Background Color */}
+          <Text style={styles.chooseColorText}>Choose Background Color:</Text>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigation.navigate('Chat', { name, bgColor })}
-        >
-          <Text style={styles.buttonText}>Start Chatting</Text>
-        </TouchableOpacity>
+          {/* Color Options */}
+          <View style={styles.colorOptionsContainer}>
+            {colors.map((color, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.colorOption,
+                  { backgroundColor: color },
+                  backgroundColor === color && styles.selectedColorOption, // Highlight selected
+                ]}
+                onPress={() => setBackgroundColor(color)}
+              />
+            ))}
+          </View>
+
+          {/* Start Chatting Button */}
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={handleStartChatting}
+          >
+            <Text style={styles.startButtonText}>Start Chatting</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ImageBackground>
   );
 };
 
-export default Start;
-
-// Start screen styles
 const styles = StyleSheet.create({
-  background: {
+  backgroundImage: {
     flex: 1,
-    resizeMode: 'cover',
-    justifyContent: 'center',
+    justifyContent: 'center', // Center content vertically
+    alignItems: 'center',     // Center content horizontally
   },
   container: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 30,
+    width: '100%',
+    justifyContent: 'space-between', // Push title to top, box to bottom
+    alignItems: 'center',
+    paddingBottom: '6%', // Roughly 6% padding from bottom for the input box
   },
-  title: {
+  appTitle: {
     fontSize: 45,
     fontWeight: '600',
-    alignSelf: 'center',
-    marginBottom: 30,
+    color: '#FFFFFF',
+    marginTop: '15%', // Roughly 15% from top for title
   },
-  inputBox: {
-    borderWidth: 1,
-    borderColor: '#757083',
+  inputOptionsBox: {
+    width: '88%', // 88% width as per common designs for input forms
+    backgroundColor: '#FFFFFF',
     borderRadius: 5,
-    padding: 10,
+    padding: 20,
+    alignItems: 'center',
+  },
+  nameInput: {
+    width: '100%',
+    height: 50,
+    borderColor: '#757083',
+    borderWidth: 1,
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    fontSize: 16,
+    fontWeight: '300',
+    color: '#757083',
+    opacity: 0.5, // 50% opacity
     marginBottom: 20,
   },
-  input: {
-    height: 40,
+  chooseColorText: {
     fontSize: 16,
-  },
-  colorLabel: {
-    fontSize: 16,
+    fontWeight: '300',
+    color: '#757083',
+    opacity: 1, // 100% opacity
     marginBottom: 10,
   },
-  colorOptions: {
+  colorOptionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 30,
+    width: '80%', // Adjust width to spread circles
+    marginBottom: 20,
   },
-  colorCircle: {
+  colorOption: {
     width: 50,
     height: 50,
-    borderRadius: 25,
+    borderRadius: 25, // Half of width/height for a perfect circle
+    borderWidth: 2, // Add a border to easily see selected state
+    borderColor: 'transparent',
   },
-  colorSelected: {
-    borderWidth: 2,
-    borderColor: '#000',
+  selectedColorOption: {
+    borderColor: '#000000', // Highlight color for selected option
   },
-  button: {
+  startButton: {
     backgroundColor: '#757083',
-    padding: 15,
-    alignItems: 'center',
+    width: '100%',
+    height: 50,
     borderRadius: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  buttonText: {
-    color: '#fff',
+  startButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
 
+export default Start;
