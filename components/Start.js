@@ -31,10 +31,11 @@ const Start = ({ navigation }) => {
   };
 
   return (
+    // ImageBackground is used here to set the background image
     <ImageBackground
-      source={require('../assets/images/react-logo.png')} // <<== REPLACE WITH YOUR ACTUAL IMAGE PATH
+      source={require('../assets/images/Gemini_Generated_Image_vgvtbtvgvtbtvgvt.png')} // <<== ENSURE THIS PATH IS CORRECT AND IMAGE EXISTS!
       style={styles.backgroundImage}
-      resizeMode="cover"
+      resizeMode="contain" // This makes the ENTIRE image visible, potentially with bars
     >
       <View style={styles.container}>
         {/* App Title */}
@@ -84,7 +85,7 @@ const Start = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   backgroundImage: {
-    flex: 1,
+    flex: 1, // Ensures the ImageBackground takes up the full screen
     justifyContent: 'center', // Center content vertically
     alignItems: 'center',     // Center content horizontally
   },
