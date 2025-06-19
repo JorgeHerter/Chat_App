@@ -1,26 +1,32 @@
-// Chat.js
 import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Platform, KeyboardAvoidingView, ImageBackground } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  KeyboardAvoidingView,
+  ImageBackground,
+  TouchableOpacity, // <--- Make sure this is imported
+  Alert // <--- Make sure this is imported (for the example Alert)
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { GiftedChat } from "react-native-gifted-chat";
+import { GiftedChat, Bubble } from "react-native-gifted-chat"; // <--- Make sure Bubble is imported
 
 const Chat = ({ route }) => {
   const { name, backgroundColor } = route.params;
   const navigation = useNavigation();
   const [messages, setMessages] = useState([]);
 
-  // Sets the header options for the chat screen
   useLayoutEffect(() => {
     navigation.setOptions({
       title: name,
       headerStyle: {
         backgroundColor: backgroundColor
       },
-      headerTintColor: '#FFFFFF' // Ensures text color is white for readability on colored backgrounds
+      headerTintColor: '#FFFFFF'
     });
   }, [navigation, name, backgroundColor]);
 
-  // Initializes the chat with predefined messages when the component mounts
   useEffect(() => {
     setMessages([
       {
@@ -42,19 +48,61 @@ const Chat = ({ route }) => {
     ]);
   }, []);
 
-  // Callback function to handle sending new messages
   const onSend = useCallback((messagesToSend = []) => {
     setMessages(previousMessages => GiftedChat.append(previousMessages, messagesToSend));
   }, []);
 
+  const renderBubble = (props) => {
+    return (
+      <Bubble
+        {...props}
+        wrapperStyle={{
+          right: {
+            backgroundColor: "#00FF00"
+          },
+          left: {
+            backgroundColor: "#0000FF"
+          }
+        }}
+      />
+    );
+  };
+
+  // --- START of the code block where syntax errors often occur if miscopied ---
+  const renderActions = (props) => {
+    return (
+      <TouchableOpacity
+        accessible={true}
+        accessibilityLabel="More options"
+        accessibilityHint="Lets you choose to send an image or your geolocation."
+        accessibilityRole="button"
+        onPress={() => {
+          Alert.alert( // <--- Check for missing ')' or '}' if error is around here
+            "More Options",
+            "Choose to send an image or your geolocation.",
+            [
+              { text: "Image", onPress: () => console.log("Send Image Pressed") },
+              { text: "Geolocation", onPress: () => console.log("Send Geolocation Pressed") },
+              { text: "Cancel", style: "cancel" }
+            ]
+          );
+        }}
+        style={styles.actionButton} // <--- Check for missing comma if you added another prop below this
+      >
+        <View>
+          <Text style={styles.actionButtonText}>+</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+  // --- END of the code block where syntax errors often occur ---
+
   return (
-    // Use ImageBackground as the main container for the chat screen
     <ImageBackground
-      source={require('../assets/images/Gemini_Generated_Image_ldim3zldim3zldim.png')}
+      source={require('C:/Users/Jorge Herter/ChatApp/assets/images/Gemini_Generated_Image_ldim3zldim3zldim.png')}
       style={styles.backgroundImage}
-      resizeMode="cover" // Use 'cover' to fill the background, or 'contain' to show the whole image
+      resizeMode="cover"
     >
-      {/* The inner View will act as an overlay for your chat content */}
       <View style={styles.chatContentContainer}>
         <GiftedChat
           messages={messages}
@@ -64,10 +112,13 @@ const Chat = ({ route }) => {
           }}
           placeholder="Type a message..."
           renderUsernameOnMessage={true}
+          renderBubble={renderBubble}
+          renderActions={renderActions} // <--- Ensure there's a comma after this line if you add another prop below it!
         />
 
-        {/* KeyboardAvoidingView to prevent keyboard from obscuring input on Android */}
-        {Platform.OS === 'android' && <KeyboardAvoidingView behavior="height" />}
+        {Platform.OS === 'android' && (
+          <KeyboardAvoidingView behavior="height" keyboardVerticalOffset={Platform.select({ ios: 0, android: -500 })} />
+        )}
       </View>
     </ImageBackground>
   );
@@ -76,21 +127,27 @@ const Chat = ({ route }) => {
 const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1,
-    width: '100%', // Ensure it takes full width
-    height: '100%', // Ensure it takes full height
-    // You might want to add a subtle tint/overlay here if the image makes text hard to read
-    // For example:
-    // tintColor: 'rgba(0,0,0,0.4)', // This doesn't apply to ImageBackground directly for tinting.
-    // Instead, consider an inner View with a semi-transparent background.
+    width: '100%',
+    height: '100%',
   },
   chatContentContainer: {
     flex: 1,
-    // If you want a semi-transparent overlay over the background image
-    // to make text more readable, you can add a background color here:
-    // backgroundColor: 'rgba(255, 255, 255, 0.2)', // Example: a light, slightly transparent overlay
   },
-  // Keep your existing styles as they were for consistency with the rest of your app
-  // (e.g., any specific styling for GiftedChat elements if you have them)
+  actionButton: { // <--- Ensure these styles are correctly within the 'styles' object
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#757083',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+    marginBottom: 5,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
 });
 
 export default Chat;

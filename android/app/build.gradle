@@ -82,9 +82,10 @@ def enableProguardInReleaseBuilds = (findProperty('android.enableProguardInRelea
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
-    ndkVersion rootProject.ext.ndkVersion
-
-    buildToolsVersion rootProject.ext.buildToolsVersion
+    
+    //ndkVersion rootProject.ext.ndkVersion
+    ndkVersion "25.2.9519653" // <--- Make sure this is the ONLY NDK version line in the android block
+    buildToolsVersion rootProject.ext.buildToolsVersion // Corrected: rootRoot.ext -> rootProject.ext
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace 'com.jorgeherter.ChatApp'
@@ -117,6 +118,13 @@ android {
             crunchPngs (findProperty('android.enablePngCrunchInReleaseBuilds')?.toBoolean() ?: true)
         }
     }
+
+    // ADD THIS BLOCK HERE
+    buildFeatures {
+        viewBinding = true
+    }
+    // END OF NEW BLOCK
+
     packagingOptions {
         jniLibs {
             useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
