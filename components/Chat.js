@@ -1,21 +1,16 @@
-import { useNavigation } from '@react-navigation/native';
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import {
-  Alert // <--- Make sure this is imported (for the example Alert)
-  ,
-
-
-
-
-  ImageBackground,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
+  View,
   Text,
-  TouchableOpacity,
-  View
+  StyleSheet,
+  Platform,
+  KeyboardAvoidingView,
+  ImageBackground,
+  TouchableOpacity, // <--- Make sure this is imported
+  Alert // <--- Make sure this is imported (for the example Alert)
 } from 'react-native';
-import { Bubble, GiftedChat } from "react-native-gifted-chat"; // <--- Make sure Bubble is imported
+import { useNavigation } from '@react-navigation/native';
+import { GiftedChat, Bubble } from "react-native-gifted-chat"; // <--- Make sure Bubble is imported
 
 const Chat = ({ route }) => {
   const { name, backgroundColor } = route.params;
@@ -104,7 +99,7 @@ const Chat = ({ route }) => {
 
   return (
     <ImageBackground
-      source={require('../assets/images/chat background.png')} // <--- Ensure the path is correct
+      source={require('C:/Users/Jorge Herter/ChatApp/assets/images/Gemini_Generated_Image_ldim3zldim3zldim.png')}
       style={styles.backgroundImage}
       resizeMode="cover"
     >

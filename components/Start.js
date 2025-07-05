@@ -1,14 +1,12 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
-  Alert,
-  ImageBackground, // Import Platform for KeyboardAvoidingView
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
+  View,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  ImageBackground, // Import ImageBackground
+  Alert, // For basic validation feedback
 } from 'react-native';
 
 const Start = ({ navigation }) => {
@@ -35,10 +33,9 @@ const Start = ({ navigation }) => {
   return (
     // ImageBackground is used here to set the background image
     <ImageBackground
-      // Corrected path with forward slashes
-      source={require('../assets/images/Background Image.png')}
+      source={require('../assets/images/Gemini_Generated_Image_vgvtbtvgvtbtvgvt.png')} // <<== ENSURE THIS PATH IS CORRECT AND IMAGE EXISTS!
       style={styles.backgroundImage}
-      resizeMode="cover" // This will cover the entire screen, cropping if necessary
+      resizeMode="contain" // This makes the ENTIRE image visible, potentially with bars
     >
       <View style={styles.container}>
         {/* App Title */}
@@ -53,9 +50,6 @@ const Start = ({ navigation }) => {
             onChangeText={setName}
             placeholder="Your name"
             placeholderTextColor="#757083" // 50% opacity color
-            accessibilityLabel="Your name"
-            accessibilityHint="Enter your name to join the chat."
-            accessibilityRole="text"
           />
 
           {/* Choose Background Color */}
@@ -72,8 +66,6 @@ const Start = ({ navigation }) => {
                   backgroundColor === color && styles.selectedColorOption, // Highlight selected
                 ]}
                 onPress={() => setBackgroundColor(color)}
-                accessibilityLabel={`Set chat background to ${color}`}
-                accessibilityRole="button"
               />
             ))}
           </View>
@@ -82,18 +74,11 @@ const Start = ({ navigation }) => {
           <TouchableOpacity
             style={styles.startButton}
             onPress={handleStartChatting}
-            accessibilityLabel="Start Chatting"
-            accessibilityHint="Navigates to the chat screen."
-            accessibilityRole="button"
           >
             <Text style={styles.startButtonText}>Start Chatting</Text>
           </TouchableOpacity>
         </View>
       </View>
-      {/* Keyboard Avoiding View for Android to prevent keyboard from hiding input */}
-      {Platform.OS === 'android' && (
-        <KeyboardAvoidingView behavior="height" />
-      )}
     </ImageBackground>
   );
 };
@@ -101,8 +86,6 @@ const Start = ({ navigation }) => {
 const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1, // Ensures the ImageBackground takes up the full screen
-    width: '100%', // Explicitly set width to 100%
-    height: '100%', // Explicitly set height to 100%
     justifyContent: 'center', // Center content vertically
     alignItems: 'center',     // Center content horizontally
   },
