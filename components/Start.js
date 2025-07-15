@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
+  Alert,
+  ImageBackground,
   StyleSheet,
-  View,
   Text,
   TextInput,
   TouchableOpacity,
-  ImageBackground, // Import ImageBackground
-  Alert, // For basic validation feedback
+  View,
 } from 'react-native';
 
 const Start = ({ navigation }) => {
@@ -33,9 +33,9 @@ const Start = ({ navigation }) => {
   return (
     // ImageBackground is used here to set the background image
     <ImageBackground
-      source={require('../assets/images/Gemini_Generated_Image_vgvtbtvgvtbtvgvt.png')} // <<== ENSURE THIS PATH IS CORRECT AND IMAGE EXISTS!
+      source={require('../assets/images/Background Image.png')} // <<== ENSURE THIS PATH IS CORRECT AND IMAGE EXISTS!
       style={styles.backgroundImage}
-      resizeMode="contain" // This makes the ENTIRE image visible, potentially with bars
+      resizeMode="cover" // Changed from "contain" to "cover" to fill the screen
     >
       <View style={styles.container}>
         {/* App Title */}
@@ -86,6 +86,8 @@ const Start = ({ navigation }) => {
 const styles = StyleSheet.create({
   backgroundImage: {
     flex: 1, // Ensures the ImageBackground takes up the full screen
+    width: '100%', // Explicitly set width to 100%
+    height: '100%', // Explicitly set height to 100%
     justifyContent: 'center', // Center content vertically
     alignItems: 'center',     // Center content horizontally
   },

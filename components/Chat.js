@@ -1,21 +1,29 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Platform,
-  KeyboardAvoidingView,
-  ImageBackground,
-  TouchableOpacity, // <--- Make sure this is imported
-  Alert // <--- Make sure this is imported (for the example Alert)
-} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { GiftedChat, Bubble } from "react-native-gifted-chat"; // <--- Make sure Bubble is imported
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import {
+  Alert,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { Bubble, GiftedChat } from "react-native-gifted-chat";
 
-const Chat = ({ route }) => {
+const Chat = ({ route, db, auth, userId }) => { // Added db, auth, userId props
   const { name, backgroundColor } = route.params;
   const navigation = useNavigation();
   const [messages, setMessages] = useState([]);
+
+  // Use the userId from props for the current user's ID
+  const currentUser = {
+    _id: userId, // Use the authenticated user's ID
+    name: name,  // Pass the name from route.params here
+    // You can also add an avatar if you have one for the user
+    // avatar: 'https://example.com/your-avatar.jpg',
+  };
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -28,13 +36,15 @@ const Chat = ({ route }) => {
   }, [navigation, name, backgroundColor]);
 
   useEffect(() => {
+    // Initial messages can be loaded from Firestore here if desired
+    // For now, keeping the static initial message for demonstration
     setMessages([
       {
         _id: 1,
         text: 'Hello developer',
         createdAt: new Date(),
         user: {
-          _id: 2,
+          _id: 2, // A different user ID for the initial message
           name: 'React Native',
           avatar: 'https://placeimg.com/140/140/any',
         },
@@ -50,6 +60,19 @@ const Chat = ({ route }) => {
 
   const onSend = useCallback((messagesToSend = []) => {
     setMessages(previousMessages => GiftedChat.append(previousMessages, messagesToSend));
+    // Here you would typically save the messages to Firestore
+    // Example:
+    // messagesToSend.forEach(msg => {
+    //   addDoc(collection(db, "messages"), {
+    //     _id: msg._id,
+    //     text: msg.text,
+    //     createdAt: msg.createdAt.getTime(), // Store as timestamp
+    //     user: {
+    //       _id: msg.user._id,
+    //       name: msg.user.name,
+    //     },
+    //   });
+    // });
   }, []);
 
   const renderBubble = (props) => {
@@ -58,17 +81,16 @@ const Chat = ({ route }) => {
         {...props}
         wrapperStyle={{
           right: {
-            backgroundColor: "#00FF00"
+            backgroundColor: "#00FF00" // Example color for your messages
           },
           left: {
-            backgroundColor: "#0000FF"
+            backgroundColor: "#0000FF" // Example color for other users' messages
           }
         }}
       />
     );
   };
 
-  // --- START of the code block where syntax errors often occur if miscopied ---
   const renderActions = (props) => {
     return (
       <TouchableOpacity
@@ -77,7 +99,7 @@ const Chat = ({ route }) => {
         accessibilityHint="Lets you choose to send an image or your geolocation."
         accessibilityRole="button"
         onPress={() => {
-          Alert.alert( // <--- Check for missing ')' or '}' if error is around here
+          Alert.alert(
             "More Options",
             "Choose to send an image or your geolocation.",
             [
@@ -87,7 +109,7 @@ const Chat = ({ route }) => {
             ]
           );
         }}
-        style={styles.actionButton} // <--- Check for missing comma if you added another prop below this
+        style={styles.actionButton}
       >
         <View>
           <Text style={styles.actionButtonText}>+</Text>
@@ -95,11 +117,11 @@ const Chat = ({ route }) => {
       </TouchableOpacity>
     );
   };
-  // --- END of the code block where syntax errors often occur ---
 
   return (
     <ImageBackground
-      source={require('C:/Users/Jorge Herter/ChatApp/assets/images/Gemini_Generated_Image_ldim3zldim3zldim.png')}
+      // Ensure this path is correct for your project
+      source={require('../assets/images/Gemini_Generated_Image_ldim3zldim3zldim.png')}
       style={styles.backgroundImage}
       resizeMode="cover"
     >
@@ -107,15 +129,14 @@ const Chat = ({ route }) => {
         <GiftedChat
           messages={messages}
           onSend={onSend}
-          user={{
-            _id: 1,
-          }}
+          user={currentUser} // <--- This is the key change: pass the currentUser object
           placeholder="Type a message..."
           renderUsernameOnMessage={true}
           renderBubble={renderBubble}
-          renderActions={renderActions} // <--- Ensure there's a comma after this line if you add another prop below it!
+          renderActions={renderActions}
         />
 
+        {/* Keyboard Avoiding View for Android to prevent keyboard from hiding input */}
         {Platform.OS === 'android' && (
           <KeyboardAvoidingView behavior="height" keyboardVerticalOffset={Platform.select({ ios: 0, android: -500 })} />
         )}
@@ -133,7 +154,7 @@ const styles = StyleSheet.create({
   chatContentContainer: {
     flex: 1,
   },
-  actionButton: { // <--- Ensure these styles are correctly within the 'styles' object
+  actionButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
