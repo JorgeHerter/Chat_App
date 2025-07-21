@@ -21,7 +21,7 @@ react {
     bundleCommand = "export:embed"
 
     /* Folders */
-     //   The root of your project, i.e. where "package.json" lives. Default is '../..'
+    //   The root of your project, i.e. where "package.json" lives. Default is '../..'
     // root = file("../../")
     //   The folder where the react-native NPM package is. Default is ../../node_modules/react-native
     // reactNativeDir = file("../../node_modules/react-native")
@@ -82,18 +82,29 @@ def enableProguardInReleaseBuilds = (findProperty('android.enableProguardInRelea
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
-    ndkVersion rootProject.ext.ndkVersion
+    // Explicitly setting ndkVersion for better control over native compilation
+    // This NDK version is known to be stable with many React Native versions.
+    // Ensure this NDK version is installed via Android Studio SDK Manager.
+    ndkVersion "23.1.7779620"
 
     buildToolsVersion rootProject.ext.buildToolsVersion
-    compileSdk rootProject.ext.compileSdkVersion
+    compileSdk rootProject.ext.compileSdkVersion // Or explicitly set to 34
 
     namespace 'com.jorgeherter.ChatApp'
     defaultConfig {
         applicationId 'com.jorgeherter.ChatApp'
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
+        minSdkVersion rootProject.ext.minSdkVersion // Ensure this resolves to at least 24
+        targetSdkVersion rootProject.ext.targetSdkVersion // Or explicitly set to 34
         versionCode 1
         versionName "1.0.0"
+
+        // Crucial for resolving C++ standard library linking conflicts for CMake-based modules
+        // This ensures all native libraries use the shared C++ standard library
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
     }
     signingConfigs {
         debug {
@@ -118,6 +129,10 @@ android {
         }
     }
     packagingOptions {
+        // Crucial for resolving C++ standard library linking conflicts
+        // Ensures that only one version of the shared C++ library is included
+        pickFirst "**/libc++_shared.so"
+        pickFirst "**/libc++_static.a" // Important for static linking fallback
         jniLibs {
             useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
         }
