@@ -1,3 +1,4 @@
+// components/Start.js
 import { useState } from 'react';
 import {
   Alert,
@@ -9,103 +10,33 @@ import {
   View,
 } from 'react-native';
 
-const Start = ({ navigation }) => {
-  const [name, setName] = useState('');
-  const [backgroundColor, setBackgroundColor] = useState('#090C08'); // Default color
+// 1. Import signInAnonymously
+import { signInAnonymously } from 'firebase/auth';
 
-  // Array of background color options as per brief
-  const colors = [
-    '#090C08', // Black
-    '#474056', // Purple
-    '#8A95A5', // Grey
-    '#B9C6AE', // Greenish-Grey
-  ];
-
-  const handleStartChatting = () => {
-    if (name.trim() === '') {
-      Alert.alert('Please enter your name to start chatting!');
-    } else {
-      // Navigate to Chat screen, passing name and chosen background color
-      navigation.navigate('Chat', { name: name.trim(), backgroundColor: backgroundColor });
-    }
-  };
-
-  return (
-    // ImageBackground is used here to set the background image
-    <ImageBackground
-      source={require('../assets/images/Background Image.png')} // <<== ENSURE THIS PATH IS CORRECT AND IMAGE EXISTS!
-      style={styles.backgroundImage}
-      resizeMode="cover" // Changed from "contain" to "cover" to fill the screen
-    >
-      <View style={styles.container}>
-        {/* App Title */}
-        <Text style={styles.appTitle}>ChatApp</Text>
-
-        {/* Input and Options Box */}
-        <View style={styles.inputOptionsBox}>
-          {/* Your Name Input */}
-          <TextInput
-            style={styles.nameInput}
-            value={name}
-            onChangeText={setName}
-            placeholder="Your name"
-            placeholderTextColor="#757083" // 50% opacity color
-          />
-
-          {/* Choose Background Color */}
-          <Text style={styles.chooseColorText}>Choose Background Color:</Text>
-
-          {/* Color Options */}
-          <View style={styles.colorOptionsContainer}>
-            {colors.map((color, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.colorOption,
-                  { backgroundColor: color },
-                  backgroundColor === color && styles.selectedColorOption, // Highlight selected
-                ]}
-                onPress={() => setBackgroundColor(color)}
-              />
-            ))}
-          </View>
-
-          {/* Start Chatting Button */}
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={handleStartChatting}
-          >
-            <Text style={styles.startButtonText}>Start Chatting</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </ImageBackground>
-  );
-};
-
+// FIX: Move styles definition to be before the component.
 const styles = StyleSheet.create({
   backgroundImage: {
-    flex: 1, // Ensures the ImageBackground takes up the full screen
-    width: '100%', // Explicitly set width to 100%
-    height: '100%', // Explicitly set height to 100%
-    justifyContent: 'center', // Center content vertically
-    alignItems: 'center',     // Center content horizontally
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   container: {
     flex: 1,
     width: '100%',
-    justifyContent: 'space-between', // Push title to top, box to bottom
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: '6%', // Roughly 6% padding from bottom for the input box
+    paddingBottom: '6%',
   },
   appTitle: {
     fontSize: 45,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginTop: '15%', // Roughly 15% from top for title
+    marginTop: '15%',
   },
   inputOptionsBox: {
-    width: '88%', // 88% width as per common designs for input forms
+    width: '88%',
     backgroundColor: '#FFFFFF',
     borderRadius: 5,
     padding: 20,
@@ -121,31 +52,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '300',
     color: '#757083',
-    opacity: 0.5, // 50% opacity
+    opacity: 0.5,
     marginBottom: 20,
   },
   chooseColorText: {
     fontSize: 16,
     fontWeight: '300',
     color: '#757083',
-    opacity: 1, // 100% opacity
+    opacity: 1,
     marginBottom: 10,
   },
   colorOptionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '80%', // Adjust width to spread circles
+    width: '80%',
     marginBottom: 20,
   },
   colorOption: {
     width: 50,
     height: 50,
-    borderRadius: 25, // Half of width/height for a perfect circle
-    borderWidth: 2, // Add a border to easily see selected state
+    borderRadius: 25,
+    borderWidth: 2,
     borderColor: 'transparent',
   },
   selectedColorOption: {
-    borderColor: '#000000', // Highlight color for selected option
+    borderColor: '#000000',
   },
   startButton: {
     backgroundColor: '#757083',
@@ -161,5 +92,94 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
+
+// 2. Accept the 'auth' prop from App.js
+const Start = ({ navigation, auth }) => {
+  const [name, setName] = useState('');
+  const [backgroundColor, setBackgroundColor] = useState('#090C08');
+
+  const colors = [
+    '#090C08',
+    '#474056',
+    '#8A95A5',
+    '#B9C6AE',
+  ];
+
+  // 3. Rewrite the function to handle Firebase Anonymous Auth
+  const handleStartChatting = async () => {
+    if (name.trim() === '') {
+      Alert.alert('Please enter your name to start chatting!');
+      return;
+    }
+
+    try {
+      // Use signInAnonymously to log in the user
+      const userCredential = await signInAnonymously(auth);
+      const user = userCredential.user;
+
+      if (user) {
+        // If a user is successfully logged in, navigate to the Chat screen
+        navigation.navigate('Chat', {
+          name: name.trim(),
+          selectedColor: backgroundColor,
+          userId: user.uid, // Pass the Firebase user ID
+        });
+        console.log("Signed in anonymously. User ID:", user.uid);
+      } else {
+        // Handle the case where the user object is not returned
+        Alert.alert("Authentication Failed", "Could not get user ID. Please try again.");
+      }
+    } catch (error) {
+      // Handle any errors during sign-in
+      console.error("Sign-in error:", error);
+      Alert.alert("Sign-in Failed", error.message);
+    }
+  };
+
+  return (
+    <ImageBackground
+      source={require('../assets/images/Background Image.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <View style={styles.container}>
+        <Text style={styles.appTitle}>ChatApp</Text>
+
+        <View style={styles.inputOptionsBox}>
+          <TextInput
+            style={styles.nameInput}
+            value={name}
+            onChangeText={setName}
+            placeholder="Your name"
+            placeholderTextColor="#757083"
+          />
+
+          <Text style={styles.chooseColorText}>Choose Background Color:</Text>
+
+          <View style={styles.colorOptionsContainer}>
+            {colors.map((color, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.colorOption,
+                  { backgroundColor: color },
+                  backgroundColor === color && styles.selectedColorOption,
+                ]}
+                onPress={() => setBackgroundColor(color)}
+              />
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={handleStartChatting}
+          >
+            <Text style={styles.startButtonText}>Start Chatting</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ImageBackground>
+  );
+};
 
 export default Start;

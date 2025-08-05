@@ -150,46 +150,76 @@ const styles = StyleSheet.create({
 
 export default App;
 registerRootComponent(App);*/
-import React from 'react';
-import { StyleSheet, View, Text } from 'react-native'; // Removed unused imports like TextInput, TouchableOpacity, ScrollView
-import { registerRootComponent } from 'expo';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { registerRootComponent } from 'expo';
 
-// Import your Start and Chat screen components
-import Start from './components/Start';
+// 1. Firebase imports
+import { getApps, initializeApp } from 'firebase/app';
+import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+
+// 2. Import AsyncStorage for React Native persistence
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+
+// Import your screen components
 import Chat from './components/Chat';
+import Start from './components/Start';
 
 // Create the navigator stack
 const Stack = createNativeStackNavigator();
+
+// 3. Your Firebase project configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDMDBGdZ7fKht-o7ih3I73RqU7Z5OPCRnc",
+  authDomain: "chatapp-ab5ff.firebaseapp.com",
+  projectId: "chatapp-ab5ff",
+  storageBucket: "chatapp-ab5ff.firebasestorage.app",
+  messagingSenderId: "381447591909",
+  appId: "1:381447591909:web:bc572a5a7bbb431893010c"
+};
+
+// 4. Initialize Firebase app and services safely for hot-reloading
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+
+let auth;
+let db;
+
+// This is a robust pattern to handle hot-reloading. We check if the auth service has been initialized
+// before attempting to get it. This prevents the configuration-not-found error.
+if (!getApps()[0]._isAuthInitialized) {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+  });
+  getApps()[0]._isAuthInitialized = true;
+} else {
+  auth = getAuth(app);
+}
+
+db = getFirestore(app);
+
 
 const App = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Start">
         {/* Start Screen Configuration */}
-        <Stack.Screen
-          name="Start"
-          component={Start}
-          options={{ headerShown: false }} // Hide header for the start screen as per design
-        />
+        <Stack.Screen name="Start" options={{ headerShown: false }}>
+          {props => <Start {...props} auth={auth} />}
+        </Stack.Screen>
+
         {/* Chat Screen Configuration */}
-        <Stack.Screen
-          name="Chat"
-          component={Chat}
-          // The title and background will be set dynamically by Chat.js
-          // via navigation.setOptions in a useLayoutEffect hook
-        />
+        <Stack.Screen name="Chat">
+          {props => <Chat {...props} db={db} />}
+        </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );
 };
 
-// You can keep your general styles here, though they might not be used directly in App.js now
-const styles = StyleSheet.create({
-  // You might not need styles here directly unless for a root view,
-  // as screen components will have their own styles.
-});
-
 export default App;
+
 registerRootComponent(App);
+
+
+

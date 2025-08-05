@@ -1,91 +1,132 @@
+// Chat.js
 import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   Alert,
   ImageBackground,
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
-import { Bubble, GiftedChat } from "react-native-gifted-chat";
 
-const Chat = ({ route, db, auth, userId }) => { // Added db, auth, userId props
-  const { name, backgroundColor } = route.params;
+import {
+  Bubble,
+  GiftedChat,
+  InputToolbar,
+} from "react-native-gifted-chat";
+// Re-importing Firebase/Firestore modules to enable database interactions
+import { addDoc, collection, onSnapshot } from 'firebase/firestore';
+
+// The Chat component now needs to receive the Firestore database instance (db) as a prop
+const Chat = ({ route, db }) => {
+  const { name, selectedColor, userId } = route.params;
+
   const navigation = useNavigation();
+  // Using useState to hold the messages fetched from Firestore
   const [messages, setMessages] = useState([]);
 
-  // Use the userId from props for the current user's ID
-  const currentUser = {
-    _id: userId, // Use the authenticated user's ID
-    name: name,  // Pass the name from route.params here
-    // You can also add an avatar if you have one for the user
-    // avatar: 'https://example.com/your-avatar.jpg',
-  };
-
+  // Set header options for the chat screen
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: name,
+      title: name || 'Chat',
       headerStyle: {
-        backgroundColor: backgroundColor
+        backgroundColor: selectedColor, // Use selectedColor for header background
       },
-      headerTintColor: '#FFFFFF'
+      headerTintColor: '#FFFFFF',
     });
-  }, [navigation, name, backgroundColor]);
+  }, [navigation, name, selectedColor]);
 
+  // Set up a real-time listener for the messages collection
   useEffect(() => {
-    // Initial messages can be loaded from Firestore here if desired
-    // For now, keeping the static initial message for demonstration
-    setMessages([
-      {
-        _id: 1,
-        text: 'Hello developer',
-        createdAt: new Date(),
-        user: {
-          _id: 2, // A different user ID for the initial message
-          name: 'React Native',
-          avatar: 'https://placeimg.com/140/140/any',
-        },
-      },
-      {
-        _id: 2,
-        text: 'This is a system message',
-        createdAt: new Date(),
-        system: true,
-      },
-    ]);
-  }, []);
+    const messagesCollectionRef = collection(db, 'messages');
+    
+    const unsubscribe = onSnapshot(messagesCollectionRef, (snapshot) => {
+      // Check if the chat is empty. If so, add a welcome message.
+      // This is a one-time check to ensure a greeting exists.
+      if (snapshot.empty) {
+        addDoc(messagesCollectionRef, {
+          text: `Hello, ${name}! Welcome to the chat.`,
+          createdAt: new Date(),
+          user: {
+            _id: 'system', // A unique ID for the system message
+            name: 'System',
+          },
+        }).then(() => {
+          console.log("Welcome message added to Firestore.");
+        }).catch((error) => {
+          console.error("Error adding welcome message: ", error);
+        });
+      }
 
+      // Map the Firestore documents to the format required by GiftedChat
+      const fetchedMessages = snapshot.docs.map(doc => ({
+        _id: doc.id,
+        text: doc.data().text,
+        createdAt: doc.data().createdAt.toDate(), // Convert Firestore Timestamp to JS Date
+        user: doc.data().user,
+      }));
+
+      // Sort the messages by date in memory (descending order)
+      fetchedMessages.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      // Update the state with the new messages
+      setMessages(fetchedMessages);
+    }, (error) => {
+      console.error("Error listening for messages:", error);
+    });
+
+    // Clean up the listener when the component unmounts
+    return () => unsubscribe();
+  }, [db, name]); // The effect now also depends on the user's name
+
+  // Function to send a new message to Firestore
   const onSend = useCallback((messagesToSend = []) => {
-    setMessages(previousMessages => GiftedChat.append(previousMessages, messagesToSend));
-    // Here you would typically save the messages to Firestore
-    // Example:
-    // messagesToSend.forEach(msg => {
-    //   addDoc(collection(db, "messages"), {
-    //     _id: msg._id,
-    //     text: msg.text,
-    //     createdAt: msg.createdAt.getTime(), // Store as timestamp
-    //     user: {
-    //       _id: msg.user._id,
-    //       name: msg.user.name,
-    //     },
-    //   });
-    // });
-  }, []);
+    // Iterate over each new message to add it to Firestore
+    messagesToSend.forEach(async (message) => {
+      try {
+        await addDoc(collection(db, 'messages'), {
+          _id: message._id, // GiftedChat provides a unique ID
+          text: message.text,
+          createdAt: new Date(), // Set the current timestamp
+          user: {
+            _id: userId,
+            name: name,
+          },
+        });
+        console.log("Message successfully sent to Firebase!");
+      } catch (error) {
+        console.error("Error sending message to Firestore: ", error);
+      }
+    });
+  }, [db, name, userId]); // Dependency array to ensure onSend is stable
 
+  // Custom Renderers for Gifted Chat
   const renderBubble = (props) => {
     return (
       <Bubble
         {...props}
         wrapperStyle={{
           right: {
-            backgroundColor: "#00FF00" // Example color for your messages
+            backgroundColor: "#007AFF",
           },
           left: {
-            backgroundColor: "#0000FF" // Example color for other users' messages
+            backgroundColor: "#FFFFFF",
           }
+        }}
+      />
+    );
+  };
+
+  const renderInputToolbar = (props) => {
+    return (
+      <InputToolbar
+        {...props}
+        containerStyle={{
+          backgroundColor: '#FFFFFF',
+        }}
+        textInputStyle={{
+          color: '#000000',
         }}
       />
     );
@@ -119,40 +160,38 @@ const Chat = ({ route, db, auth, userId }) => { // Added db, auth, userId props
   };
 
   return (
-    <ImageBackground
-      // Ensure this path is correct for your project
-      source={require('../assets/images/Gemini_Generated_Image_ldim3zldim3zldim.png')}
-      style={styles.backgroundImage}
-      resizeMode="cover"
-    >
-      <View style={styles.chatContentContainer}>
+    <View style={styles.container}>
+      <ImageBackground
+        source={require('../assets/images/Gemini_Generated_Image_ldim3zldim3zldim.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
         <GiftedChat
           messages={messages}
           onSend={onSend}
-          user={currentUser} // <--- This is the key change: pass the currentUser object
+          user={{ _id: userId, name: name || "Anonymous" }}
           placeholder="Type a message..."
           renderUsernameOnMessage={true}
           renderBubble={renderBubble}
           renderActions={renderActions}
+          renderInputToolbar={renderInputToolbar}
+          keyboardShouldPersistTaps="always"
+          showUserAvatar={true}
+          showAvatarForEveryMessage={true}
         />
-
-        {/* Keyboard Avoiding View for Android to prevent keyboard from hiding input */}
-        {Platform.OS === 'android' && (
-          <KeyboardAvoidingView behavior="height" keyboardVerticalOffset={Platform.select({ ios: 0, android: -500 })} />
-        )}
-      </View>
-    </ImageBackground>
+      </ImageBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   backgroundImage: {
     flex: 1,
     width: '100%',
     height: '100%',
-  },
-  chatContentContainer: {
-    flex: 1,
   },
   actionButton: {
     width: 40,
