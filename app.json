@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "minSdkVersion": 24,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -34,6 +35,11 @@
       ],
       "expo-web-browser",
       "react-native-edge-to-edge"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "870bc3dc-bb99-43ae-a039-2711b42a370f"
+      }
+    }
   }
 }

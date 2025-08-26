@@ -1,5 +1,5 @@
 // Chat.js
-import { useNavigation } from '@react-navigation/native';
+/*import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   Alert,
@@ -161,8 +161,9 @@ const Chat = ({ route, db }) => {
 
   return (
     <View style={styles.container}>
+     
       <ImageBackground
-        source={require('../assets/images/Gemini_Generated_Image_ldim3zldim3zldim.png')}
+        source={require('C:/Users/Jorge Herter/ChatApp/assets/images/Gemini_Generated_Image_ldim3zldim3zldim.png')}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
@@ -210,4 +211,188 @@ const styles = StyleSheet.create({
   },
 });
 
+export default Chat;*/
+import { useNavigation } from '@react-navigation/native';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import {
+  Alert,
+  ImageBackground,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
+
+import { addDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import {
+  Bubble,
+  GiftedChat,
+  InputToolbar,
+} from "react-native-gifted-chat";
+
+const Chat = ({ route, db, auth, userId }) => {
+  const { name, selectedColor } = route.params;
+
+  const navigation = useNavigation();
+  const [messages, setMessages] = useState([]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: name || 'Chat',
+      headerStyle: {
+        backgroundColor: selectedColor,
+      },
+      headerTintColor: '#FFFFFF',
+    });
+  }, [navigation, name, selectedColor]);
+
+  useEffect(() => {
+    const messagesCollectionRef = collection(db, 'messages');
+    const messagesQuery = query(messagesCollectionRef, orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      const fetchedMessages = snapshot.docs.map(doc => ({
+        _id: doc.id,
+        text: doc.data().text,
+        createdAt: doc.data().createdAt.toDate(),
+        user: doc.data().user,
+      }));
+      setMessages(fetchedMessages);
+    }, (error) => {
+      console.error("Error listening for messages:", error);
+    });
+
+    return () => unsubscribe();
+  }, [db]);
+
+  const onSend = useCallback((messagesToSend = []) => {
+    messagesToSend.forEach(async (message) => {
+      try {
+        await addDoc(collection(db, 'messages'), {
+          text: message.text,
+          createdAt: new Date(),
+          user: {
+            _id: userId,
+            name: name,
+          },
+        });
+        console.log("Message successfully sent to Firebase!");
+      } catch (error) {
+        console.error("Error sending message to Firestore: ", error);
+      }
+    });
+  }, [db, name, userId]);
+
+  const renderBubble = (props) => {
+    return (
+      <Bubble
+        {...props}
+        wrapperStyle={{
+          right: {
+            backgroundColor: "#007AFF",
+          },
+          left: {
+            backgroundColor: "#FFFFFF",
+          }
+        }}
+      />
+    );
+  };
+
+  const renderInputToolbar = (props) => {
+    return (
+      <InputToolbar
+        {...props}
+        containerStyle={{
+          backgroundColor: '#FFFFFF',
+          // Removed all deprecated shadow styles
+          elevation: 0,
+        }}
+        textInputStyle={{
+          color: '#000000',
+        }}
+      />
+    );
+  };
+
+  const renderActions = (props) => {
+    return (
+      <TouchableOpacity
+        accessible={true}
+        accessibilityLabel="More options"
+        accessibilityHint="Lets you choose to send an image or your geolocation."
+        accessibilityRole="button"
+        onPress={() => {
+          Alert.alert(
+            "More Options",
+            "Choose to send an image or your geolocation.",
+            [
+              { text: "Image", onPress: () => console.log("Send Image Pressed") },
+              { text: "Geolocation", onPress: () => console.log("Send Geolocation Pressed") },
+              { text: "Cancel", style: "cancel" }
+            ]
+          );
+        }}
+        style={styles.actionButton}
+      >
+        <View>
+          <Text style={styles.actionButtonText}>+</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <ImageBackground
+        source={require('../assets/images/chat background.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        <GiftedChat
+          messages={messages}
+          onSend={onSend}
+          user={{ _id: userId, name: name || "Anonymous" }}
+          placeholder="Type a message..."
+          renderUsernameOnMessage={true}
+          renderBubble={renderBubble}
+          renderActions={renderActions}
+          renderInputToolbar={renderInputToolbar}
+          keyboardShouldPersistTaps="always"
+          showUserAvatar={true}
+          showAvatarForEveryMessage={true}
+        />
+      </ImageBackground>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#757083',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+    marginBottom: 5,
+    elevation: 0,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+});
+
 export default Chat;
+

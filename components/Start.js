@@ -1,5 +1,5 @@
 // components/Start.js
-import { useState } from 'react';
+/*import { useState } from 'react';
 import {
   Alert,
   ImageBackground,
@@ -181,5 +181,134 @@ const Start = ({ navigation, auth }) => {
     </ImageBackground>
   );
 };
+
+export default Start;*/
+import { useState } from 'react';
+import { ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+const Start = ({ navigation }) => {
+  const [name, setName] = useState('');
+  const [selectedColor, setSelectedColor] = useState('#090C08');
+
+  // Define the colors to choose from
+  const colors = ['#090C08', '#474056', '#8A95A5', '#B9C6AE'];
+
+  const handleStartChat = () => {
+    if (name.trim() !== '') {
+      navigation.navigate('Chat', { name, selectedColor });
+    } else {
+      alert('Please enter your name.');
+    }
+  };
+
+  return (
+    <ImageBackground
+      source={require('../assets/images/Background Image.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <View style={styles.container}>
+        <Text style={styles.title}>Chat App</Text>
+        <View style={styles.box}>
+          <TextInput
+            style={styles.input}
+            placeholder="Your Name"
+            value={name}
+            onChangeText={setName}
+          />
+          <Text style={styles.chooseColorText}>Choose Background Color:</Text>
+          <View style={styles.colorPalette}>
+            {colors.map((color) => (
+              <TouchableOpacity
+                key={color}
+                style={[
+                  styles.colorOption,
+                  { backgroundColor: color },
+                  selectedColor === color && styles.colorOptionSelected,
+                ]}
+                onPress={() => setSelectedColor(color)}
+              />
+            ))}
+          </View>
+          <TouchableOpacity style={styles.button} onPress={handleStartChat}>
+            <Text style={styles.buttonText}>Start Chatting</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </ImageBackground>
+  );
+};
+
+const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '88%',
+  },
+  title: {
+    fontSize: 45,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 50,
+  },
+  box: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    alignItems: 'center',
+  },
+  input: {
+    height: 50,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#757083',
+    padding: 10,
+    marginBottom: 20,
+    color: '#757083',
+    fontSize: 16,
+  },
+  chooseColorText: {
+    fontSize: 16,
+    fontWeight: '300',
+    color: '#757083',
+    marginBottom: 10,
+  },
+  colorPalette: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '80%',
+    marginBottom: 20,
+  },
+  colorOption: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  colorOptionSelected: {
+    borderColor: '#000000',
+    borderWidth: 2,
+  },
+  button: {
+    backgroundColor: '#757083',
+    padding: 15,
+    width: '100%',
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+});
 
 export default Start;

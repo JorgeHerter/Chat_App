@@ -153,23 +153,24 @@ registerRootComponent(App);*/
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { registerRootComponent } from 'expo';
-
-// 1. Firebase imports
-import { getApps, initializeApp } from 'firebase/app';
-import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-
-// 2. Import AsyncStorage for React Native persistence
-import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
-
-// Import your screen components
+import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import Chat from './components/Chat';
 import Start from './components/Start';
 
-// Create the navigator stack
-const Stack = createNativeStackNavigator();
+// Import all necessary Firebase/Firestore modules
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { initializeApp } from 'firebase/app';
+import {
+  browserLocalPersistence,
+  getReactNativePersistence,
+  initializeAuth,
+  onAuthStateChanged,
+  signInAnonymously
+} from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
-// 3. Your Firebase project configuration
+// Your Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDMDBGdZ7fKht-o7ih3I73RqU7Z5OPCRnc",
   authDomain: "chatapp-ab5ff.firebaseapp.com",
@@ -179,47 +180,71 @@ const firebaseConfig = {
   appId: "1:381447591909:web:bc572a5a7bbb431893010c"
 };
 
-// 4. Initialize Firebase app and services safely for hot-reloading
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+// Initialize Firebase App
+console.log("Initializing Firebase App...");
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-let auth;
-let db;
+// Determine the correct persistence method based on the platform
+const persistence =
+  Platform.OS === 'web'
+    ? browserLocalPersistence
+    : getReactNativePersistence(AsyncStorage);
 
-// This is a robust pattern to handle hot-reloading. We check if the auth service has been initialized
-// before attempting to get it. This prevents the configuration-not-found error.
-if (!getApps()[0]._isAuthInitialized) {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(ReactNativeAsyncStorage),
-  });
-  getApps()[0]._isAuthInitialized = true;
-} else {
-  auth = getAuth(app);
-}
+// Initialize Firebase Auth with the correct persistence
+console.log("Initializing Firebase Auth with platform-specific persistence...");
+const auth = initializeAuth(app, { persistence });
 
-db = getFirestore(app);
+const Stack = createNativeStackNavigator();
 
+function App() {
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-const App = () => {
+  useEffect(() => {
+    // This listener will fire whenever the auth state changes
+    const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+      if (authUser) {
+        // A user is signed in.
+        setUser(authUser);
+        console.log("Auth state changed. User ID:", authUser.uid);
+        setIsLoading(false);
+      } else {
+        // No user is signed in, so we sign in anonymously.
+        console.log("No user signed in. Signing in anonymously...");
+        signInAnonymously(auth)
+          .then((userCredential) => {
+            setUser(userCredential.user);
+            console.log("Anonymous sign-in successful. User ID:", userCredential.user.uid);
+          })
+          .catch((error) => {
+            console.error("Anonymous sign-in failed:", error);
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      }
+    });
+
+    // Unsubscribe from the listener when the component unmounts
+    return () => unsubscribeAuth();
+  }, [auth]);
+
+  if (isLoading) {
+    return null;
+  }
+  
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Start">
-        {/* Start Screen Configuration */}
-        <Stack.Screen name="Start" options={{ headerShown: false }}>
-          {props => <Start {...props} auth={auth} />}
-        </Stack.Screen>
-
-        {/* Chat Screen Configuration */}
+        <Stack.Screen name="Start" component={Start} />
         <Stack.Screen name="Chat">
-          {props => <Chat {...props} db={db} />}
+          {(props) => <Chat {...props} db={db} auth={auth} userId={user.uid} />}
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );
-};
-
-export default App;
+}
 
 registerRootComponent(App);
-
-
 
