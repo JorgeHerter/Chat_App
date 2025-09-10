@@ -150,11 +150,13 @@ const styles = StyleSheet.create({
 
 export default App;
 registerRootComponent(App);*/
+// App.js
+import { useNetInfo } from "@react-native-community/netinfo";
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { registerRootComponent } from 'expo';
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import Chat from './components/Chat';
 import Start from './components/Start';
 
@@ -168,7 +170,7 @@ import {
   onAuthStateChanged,
   signInAnonymously
 } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { disableNetwork, enableNetwork, getFirestore } from 'firebase/firestore';
 
 // Your Firebase configuration
 const firebaseConfig = {
@@ -200,6 +202,22 @@ const Stack = createNativeStackNavigator();
 function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Use useNetInfo() to get network connection status
+  const connectionStatus = useNetInfo();
+
+  // useEffect to handle network status changes and manage Firestore network state
+  useEffect(() => {
+    // Alert the user if connection is lost
+    if (connectionStatus.isConnected === false) {
+      Alert.alert("Connection Lost!");
+      // Disable Firestore network access
+      disableNetwork(db);
+    } else if (connectionStatus.isConnected === true) {
+      // Re-enable Firestore network access
+      enableNetwork(db);
+    }
+  }, [connectionStatus.isConnected]);
 
   useEffect(() => {
     // This listener will fire whenever the auth state changes
@@ -239,7 +257,14 @@ function App() {
       <Stack.Navigator initialRouteName="Start">
         <Stack.Screen name="Start" component={Start} />
         <Stack.Screen name="Chat">
-          {(props) => <Chat {...props} db={db} auth={auth} userId={user.uid} />}
+          {(props) => <Chat 
+            {...props} 
+            db={db} 
+            auth={auth} 
+            userId={user.uid} 
+            // Pass the connection status as a prop
+            isConnected={connectionStatus.isConnected}
+          />}
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
@@ -247,4 +272,3 @@ function App() {
 }
 
 registerRootComponent(App);
-

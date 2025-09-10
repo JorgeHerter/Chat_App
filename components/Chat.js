@@ -216,13 +216,17 @@ import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   Alert,
-  ImageBackground,
+  ImageBackground, // <-- Import Platform
+  KeyboardAvoidingView // <-- Import KeyboardAvoidingView
+  ,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { addDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import {
   Bubble,
@@ -246,7 +250,42 @@ const Chat = ({ route, db, auth, userId }) => {
     });
   }, [navigation, name, selectedColor]);
 
+  const loadCachedMessages = async () => {
+    try {
+      const cachedMessages = await AsyncStorage.getItem('chat_messages');
+      if (cachedMessages) {
+        setMessages(JSON.parse(cachedMessages));
+        console.log("Messages loaded from cache.");
+      }
+    } catch (error) {
+      console.error("Error loading cached messages:", error);
+    }
+  };
+
+  const cacheMessages = async (messagesToCache) => {
+    try {
+      await AsyncStorage.setItem('chat_messages', JSON.stringify(messagesToCache));
+      console.log("Messages successfully cached.");
+    } catch (error) {
+      console.error("Error caching messages:", error);
+    }
+  };
+
+  const clearCache = async () => {
+    try {
+      await AsyncStorage.removeItem('chat_messages');
+      setMessages([]);
+      Alert.alert("Success", "Messages have been cleared from cache.");
+      console.log("Cache cleared successfully.");
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+      Alert.alert("Error", "Failed to clear messages from cache.");
+    }
+  };
+
   useEffect(() => {
+    loadCachedMessages();
+
     const messagesCollectionRef = collection(db, 'messages');
     const messagesQuery = query(messagesCollectionRef, orderBy('createdAt', 'desc'));
 
@@ -258,6 +297,7 @@ const Chat = ({ route, db, auth, userId }) => {
         user: doc.data().user,
       }));
       setMessages(fetchedMessages);
+      cacheMessages(fetchedMessages);
     }, (error) => {
       console.error("Error listening for messages:", error);
     });
@@ -279,6 +319,7 @@ const Chat = ({ route, db, auth, userId }) => {
         console.log("Message successfully sent to Firebase!");
       } catch (error) {
         console.error("Error sending message to Firestore: ", error);
+        Alert.alert("Error", "Failed to send message.");
       }
     });
   }, [db, name, userId]);
@@ -305,7 +346,6 @@ const Chat = ({ route, db, auth, userId }) => {
         {...props}
         containerStyle={{
           backgroundColor: '#FFFFFF',
-          // Removed all deprecated shadow styles
           elevation: 0,
         }}
         textInputStyle={{
@@ -317,28 +357,42 @@ const Chat = ({ route, db, auth, userId }) => {
 
   const renderActions = (props) => {
     return (
-      <TouchableOpacity
-        accessible={true}
-        accessibilityLabel="More options"
-        accessibilityHint="Lets you choose to send an image or your geolocation."
-        accessibilityRole="button"
-        onPress={() => {
-          Alert.alert(
-            "More Options",
-            "Choose to send an image or your geolocation.",
-            [
-              { text: "Image", onPress: () => console.log("Send Image Pressed") },
-              { text: "Geolocation", onPress: () => console.log("Send Geolocation Pressed") },
-              { text: "Cancel", style: "cancel" }
-            ]
-          );
-        }}
-        style={styles.actionButton}
-      >
-        <View>
-          <Text style={styles.actionButtonText}>+</Text>
-        </View>
-      </TouchableOpacity>
+      <View style={styles.actionContainer}>
+        <TouchableOpacity
+          accessible={true}
+          accessibilityLabel="More options"
+          accessibilityHint="Lets you choose to send an image or your geolocation."
+          accessibilityRole="button"
+          onPress={() => {
+            Alert.alert(
+              "More Options",
+              "Choose to send an image or your geolocation.",
+              [
+                { text: "Image", onPress: () => console.log("Send Image Pressed") },
+                { text: "Geolocation", onPress: () => console.log("Send Geolocation Pressed") },
+                { text: "Cancel", style: "cancel" }
+              ]
+            );
+          }}
+          style={styles.actionButton}
+        >
+          <View>
+            <Text style={styles.actionButtonText}>+</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          accessible={true}
+          accessibilityLabel="Clear messages cache"
+          accessibilityHint="Clears all local messages stored on the device."
+          accessibilityRole="button"
+          onPress={clearCache}
+          style={styles.actionButton}
+        >
+          <View>
+            <Text style={styles.actionButtonText}>-</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -349,19 +403,24 @@ const Chat = ({ route, db, auth, userId }) => {
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <GiftedChat
-          messages={messages}
-          onSend={onSend}
-          user={{ _id: userId, name: name || "Anonymous" }}
-          placeholder="Type a message..."
-          renderUsernameOnMessage={true}
-          renderBubble={renderBubble}
-          renderActions={renderActions}
-          renderInputToolbar={renderInputToolbar}
-          keyboardShouldPersistTaps="always"
-          showUserAvatar={true}
-          showAvatarForEveryMessage={true}
-        />
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <GiftedChat
+            messages={messages}
+            onSend={onSend}
+            user={{ _id: userId, name: name || "Anonymous" }}
+            placeholder="Type a message..."
+            renderUsernameOnMessage={true}
+            renderBubble={renderBubble}
+            renderActions={renderActions}
+            renderInputToolbar={renderInputToolbar}
+            keyboardShouldPersistTaps="always"
+            showUserAvatar={true}
+            showAvatarForEveryMessage={true}
+          />
+        </KeyboardAvoidingView>
       </ImageBackground>
     </View>
   );
@@ -375,6 +434,11 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionButton: {
     width: 40,
@@ -395,4 +459,3 @@ const styles = StyleSheet.create({
 });
 
 export default Chat;
-
