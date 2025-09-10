@@ -202,22 +202,74 @@ const Stack = createNativeStackNavigator();
 function App() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [actualNetworkState, setActualNetworkState] = useState(null);
 
   // Use useNetInfo() to get network connection status
   const connectionStatus = useNetInfo();
 
+  // Enhanced network state that combines useNetInfo with actual connectivity test
+  useEffect(() => {
+    const testActualConnectivity = async () => {
+      try {
+        // Try to fetch from a reliable endpoint with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch('https://www.google.com/favicon.ico', {
+          method: 'HEAD',
+          signal: controller.signal,
+          cache: 'no-cache'
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          console.log("Connectivity test: ONLINE");
+          setActualNetworkState(true);
+        } else {
+          console.log("Connectivity test: OFFLINE (bad response)");
+          setActualNetworkState(false);
+        }
+      } catch (error) {
+        console.log("Connectivity test: OFFLINE (fetch failed)", error.message);
+        setActualNetworkState(false);
+      }
+    };
+
+    // Test connectivity when useNetInfo changes
+    if (connectionStatus.isConnected !== null) {
+      testActualConnectivity();
+    }
+
+    // Also test connectivity every 10 seconds
+    const interval = setInterval(testActualConnectivity, 10000);
+    return () => clearInterval(interval);
+  }, [connectionStatus.isConnected]);
+
+  // Determine effective connection state
+  const effectiveConnection = actualNetworkState !== null ? actualNetworkState : connectionStatus.isConnected;
+
+  // Debug logging
+  useEffect(() => {
+    console.log("Network Status Debug:");
+    console.log("- useNetInfo isConnected:", connectionStatus.isConnected);
+    console.log("- useNetInfo type:", connectionStatus.type);
+    console.log("- Actual connectivity test:", actualNetworkState);
+    console.log("- Effective connection:", effectiveConnection);
+  }, [connectionStatus.isConnected, connectionStatus.type, actualNetworkState, effectiveConnection]);
+
   // useEffect to handle network status changes and manage Firestore network state
   useEffect(() => {
     // Alert the user if connection is lost
-    if (connectionStatus.isConnected === false) {
+    if (effectiveConnection === false) {
       Alert.alert("Connection Lost!");
       // Disable Firestore network access
-      disableNetwork(db);
-    } else if (connectionStatus.isConnected === true) {
+      disableNetwork(db).catch(console.error);
+    } else if (effectiveConnection === true) {
       // Re-enable Firestore network access
-      enableNetwork(db);
+      enableNetwork(db).catch(console.error);
     }
-  }, [connectionStatus.isConnected]);
+  }, [effectiveConnection]);
 
   useEffect(() => {
     // This listener will fire whenever the auth state changes
@@ -255,15 +307,25 @@ function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Start">
-        <Stack.Screen name="Start" component={Start} />
+        <Stack.Screen name="Start">
+          {(props) => <Start 
+            {...props} 
+            // Pass the effective connection status as props
+            isConnected={effectiveConnection}
+            connectionType={connectionStatus.type}
+            rawNetInfo={connectionStatus} // For debugging
+          />}
+        </Stack.Screen>
         <Stack.Screen name="Chat">
           {(props) => <Chat 
             {...props} 
             db={db} 
             auth={auth} 
             userId={user.uid} 
-            // Pass the connection status as a prop
-            isConnected={connectionStatus.isConnected}
+            // Pass the effective connection status as props
+            isConnected={effectiveConnection}
+            connectionType={connectionStatus.type}
+            rawNetInfo={connectionStatus} // For debugging
           />}
         </Stack.Screen>
       </Stack.Navigator>

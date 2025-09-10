@@ -216,9 +216,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   Alert,
-  ImageBackground, // <-- Import Platform
-  KeyboardAvoidingView // <-- Import KeyboardAvoidingView
-  ,
+  ImageBackground,
+  KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
@@ -234,11 +233,12 @@ import {
   InputToolbar,
 } from "react-native-gifted-chat";
 
-const Chat = ({ route, db, auth, userId }) => {
+const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo }) => {
   const { name, selectedColor } = route.params;
 
   const navigation = useNavigation();
   const [messages, setMessages] = useState([]);
+  const [debugMode, setDebugMode] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -306,6 +306,12 @@ const Chat = ({ route, db, auth, userId }) => {
   }, [db]);
 
   const onSend = useCallback((messagesToSend = []) => {
+    // If offline, show alert and don't send
+    if (!isConnected) {
+      Alert.alert("Offline", "You are currently offline. Message will be sent when connection is restored.");
+      return;
+    }
+
     messagesToSend.forEach(async (message) => {
       try {
         await addDoc(collection(db, 'messages'), {
@@ -322,7 +328,7 @@ const Chat = ({ route, db, auth, userId }) => {
         Alert.alert("Error", "Failed to send message.");
       }
     });
-  }, [db, name, userId]);
+  }, [db, name, userId, isConnected]);
 
   const renderBubble = (props) => {
     return (
@@ -341,6 +347,11 @@ const Chat = ({ route, db, auth, userId }) => {
   };
 
   const renderInputToolbar = (props) => {
+    // Don't render input toolbar if offline
+    if (!isConnected) {
+      return null;
+    }
+    
     return (
       <InputToolbar
         {...props}
@@ -392,8 +403,38 @@ const Chat = ({ route, db, auth, userId }) => {
             <Text style={styles.actionButtonText}>-</Text>
           </View>
         </TouchableOpacity>
+        <TouchableOpacity
+          accessible={true}
+          accessibilityLabel="Toggle debug mode"
+          accessibilityHint="Shows detailed network information for debugging."
+          accessibilityRole="button"
+          onPress={() => setDebugMode(!debugMode)}
+          style={[styles.actionButton, { backgroundColor: '#FF6B35' }]}
+        >
+          <View>
+            <Text style={styles.actionButtonText}>D</Text>
+          </View>
+        </TouchableOpacity>
       </View>
     );
+  };
+
+  // Function to get network status display text
+  const getNetworkStatus = () => {
+    if (debugMode) {
+      return `Debug: useNetInfo=${rawNetInfo?.isConnected}, effective=${isConnected}`;
+    }
+    
+    if (isConnected === null) return 'Checking connection...';
+    if (isConnected === false) return 'Offline - Messages cached locally';
+    return `Online (${connectionType || 'unknown'})`;
+  };
+
+  // Function to get network status color
+  const getNetworkStatusColor = () => {
+    if (isConnected === null) return '#FFA500'; // Orange for checking
+    if (isConnected === false) return '#FF4444'; // Red for offline
+    return '#00AA00'; // Green for online
   };
 
   return (
@@ -403,6 +444,18 @@ const Chat = ({ route, db, auth, userId }) => {
         style={styles.backgroundImage}
         resizeMode="cover"
       >
+        {/* Network Status Bar */}
+        <View style={[styles.networkStatusBar, { backgroundColor: getNetworkStatusColor() }]}>
+          <Text style={styles.networkStatusText}>
+            {getNetworkStatus()}
+          </Text>
+          {debugMode && (
+            <Text style={[styles.networkStatusText, { fontSize: 10, marginTop: 2 }]}>
+              Type: {rawNetInfo?.type} | Details: {rawNetInfo?.details?.ssid || 'N/A'}
+            </Text>
+          )}
+        </View>
+
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -411,7 +464,7 @@ const Chat = ({ route, db, auth, userId }) => {
             messages={messages}
             onSend={onSend}
             user={{ _id: userId, name: name || "Anonymous" }}
-            placeholder="Type a message..."
+            placeholder={isConnected ? "Type a message..." : "You are offline"}
             renderUsernameOnMessage={true}
             renderBubble={renderBubble}
             renderActions={renderActions}
@@ -434,6 +487,18 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+  },
+  networkStatusBar: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  networkStatusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   actionContainer: {
     flexDirection: 'row',

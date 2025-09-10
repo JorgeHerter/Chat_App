@@ -186,7 +186,7 @@ export default Start;*/
 import { useState } from 'react';
 import { ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-const Start = ({ navigation }) => {
+const Start = ({ navigation, isConnected, connectionType }) => {
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState('#090C08');
 
@@ -201,6 +201,20 @@ const Start = ({ navigation }) => {
     }
   };
 
+  // Function to get network status display text
+  const getNetworkStatus = () => {
+    if (isConnected === null) return 'Checking connection...';
+    if (isConnected === false) return 'Offline';
+    return `Online (${connectionType || 'unknown'})`;
+  };
+
+  // Function to get network status color
+  const getNetworkStatusColor = () => {
+    if (isConnected === null) return '#FFA500'; // Orange for checking
+    if (isConnected === false) return '#FF4444'; // Red for offline
+    return '#00AA00'; // Green for online
+  };
+
   return (
     <ImageBackground
       source={require('../assets/images/Background Image.png')}
@@ -209,6 +223,14 @@ const Start = ({ navigation }) => {
     >
       <View style={styles.container}>
         <Text style={styles.title}>Chat App</Text>
+        
+        {/* Network Status Display */}
+        <View style={styles.networkStatusContainer}>
+          <Text style={[styles.networkStatus, { color: getNetworkStatusColor() }]}>
+            {getNetworkStatus()}
+          </Text>
+        </View>
+        
         <View style={styles.box}>
           <TextInput
             style={styles.input}
@@ -257,7 +279,19 @@ const styles = StyleSheet.create({
     fontSize: 45,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 50,
+    marginBottom: 20,
+  },
+  networkStatusContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 30,
+  },
+  networkStatus: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   box: {
     width: '100%',
