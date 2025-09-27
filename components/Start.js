@@ -184,20 +184,68 @@ const Start = ({ navigation, auth }) => {
 
 export default Start;*/
 import { useState } from 'react';
-import { ImageBackground, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert, // Import Alert for better UX
+  Image,
+  ImageBackground,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+import * as ImagePicker from 'expo-image-picker'; // Import ImagePicker
 
 const Start = ({ navigation, isConnected, connectionType }) => {
+  const forceOnline = true;
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState('#090C08');
+  // 1. State to temporarily hold the image data
+  const [image, setImage] = useState(null); 
 
   // Define the colors to choose from
   const colors = ['#090C08', '#474056', '#8A95A5', '#B9C6AE'];
 
+  // 2. Function to handle image selection from the library
+  const pickImage = async () => {
+    // Request media library permissions
+    let permissions = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (permissions?.granted) {
+      // Launch the image library
+      let result = await ImagePicker.launchImageLibraryAsync({
+        // FIX: Replaced deprecated MediaTypeOptions.Images with MediaType.Images
+        mediaTypes: ImagePicker.MediaType.Images, 
+        allowsEditing: true, // Allow user to crop/edit
+        quality: 1,
+      });
+
+      // Check if the user didn't cancel the operation
+      if (!result.canceled) {
+        // Set the image state with the asset information
+        setImage(result.assets[0]);
+        console.log("Image URI picked:", result.assets[0].uri);
+      } else {
+        Alert.alert("Image Picking", "Image selection cancelled.");
+      }
+    } else {
+      Alert.alert("Permission Denied", "We need access to your photo library to pick images.");
+    }
+  };
+
+  // 3. Placeholder for taking a photo (as requested in prompt)
+  const takePhoto = () => {
+    Alert.alert("Feature Disabled", "The 'Take a Photo' feature is not yet implemented.");
+  };
+
   const handleStartChat = () => {
     if (name.trim() !== '') {
+      // Navigate to Chat, passing name and color
       navigation.navigate('Chat', { name, selectedColor });
     } else {
-      alert('Please enter your name.');
+      // Replace alert with Alert.alert
+      Alert.alert('Name Required', 'Please enter your name to start chatting.');
     }
   };
 
@@ -237,7 +285,9 @@ const Start = ({ navigation, isConnected, connectionType }) => {
             placeholder="Your Name"
             value={name}
             onChangeText={setName}
+            accessibilityLabel="Your Name Input"
           />
+          
           <Text style={styles.chooseColorText}>Choose Background Color:</Text>
           <View style={styles.colorPalette}>
             {colors.map((color) => (
@@ -249,10 +299,48 @@ const Start = ({ navigation, isConnected, connectionType }) => {
                   selectedColor === color && styles.colorOptionSelected,
                 ]}
                 onPress={() => setSelectedColor(color)}
+                accessibilityLabel={`Select color ${color}`}
               />
             ))}
           </View>
-          <TouchableOpacity style={styles.button} onPress={handleStartChat}>
+          
+          {/* New Media Buttons */}
+          <View style={styles.mediaContainer}>
+            <TouchableOpacity 
+              style={[
+                styles.mediaButton, 
+                { backgroundColor: isConnected ? '#DDDDDD' : '#AAAAAA' } // Visually indicate disabled state
+              ]} 
+              onPress={pickImage}
+              disabled={!isConnected} // Disable if offline
+              accessibilityLabel="Pick an image from the library"
+            >
+              <Text style={styles.mediaButtonText}>Pick an image from the library</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[
+                styles.mediaButton, 
+                { backgroundColor: isConnected ? '#DDDDDD' : '#AAAAAA' }
+              ]} 
+              onPress={takePhoto}
+              disabled={!isConnected} // Disable if offline
+              accessibilityLabel="Take a photo (currently disabled)"
+            >
+              <Text style={styles.mediaButtonText}>Take a photo</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Conditional Image Display */}
+          {image && (
+            <Image 
+              source={{ uri: image.uri }} 
+              style={styles.previewImage} 
+              accessibilityLabel="Preview of selected image"
+            />
+          )}
+
+          <TouchableOpacity style={[styles.button, { backgroundColor: selectedColor }]} onPress={handleStartChat}>
             <Text style={styles.buttonText}>Start Chatting</Text>
           </TouchableOpacity>
         </View>
@@ -271,15 +359,17 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end', // Align contents to the bottom
     alignItems: 'center',
     width: '88%',
+    paddingBottom: '20%', 
   },
   title: {
     fontSize: 45,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 20,
+    position: 'absolute', 
+    top: 100,
   },
   networkStatusContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -298,6 +388,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 20,
     alignItems: 'center',
+    borderRadius: 15, // Added rounded corners
   },
   input: {
     height: 50,
@@ -308,6 +399,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#757083',
     fontSize: 16,
+    borderRadius: 8, 
   },
   chooseColorText: {
     fontSize: 16,
@@ -329,14 +421,40 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   colorOptionSelected: {
-    borderColor: '#000000',
-    borderWidth: 2,
+    borderColor: '#757083',
+    borderWidth: 3,
   },
-  button: {
-    backgroundColor: '#757083',
+  // Styles for media section
+  mediaContainer: {
+    width: '100%',
+    marginBottom: 10,
+  },
+  mediaButton: {
     padding: 15,
     width: '100%',
     alignItems: 'center',
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  mediaButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#757083',
+  },
+  previewImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 10,
+    marginVertical: 15,
+    borderWidth: 1,
+    borderColor: '#757083',
+  },
+  button: {
+    padding: 15,
+    width: '100%',
+    alignItems: 'center',
+    borderRadius: 8,
+    marginTop: 10,
   },
   buttonText: {
     fontSize: 16,

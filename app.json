@@ -10,7 +10,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "The app accesses your photos to let you choose an image to send in the chat."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,6 +28,12 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you choose an image to send in the chat."
+        }
+      ],
       [
         "expo-splash-screen",
         {

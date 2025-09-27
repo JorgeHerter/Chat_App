@@ -216,6 +216,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   Alert,
+  Image,
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
@@ -226,7 +227,10 @@ import {
 } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import { addDoc, collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
+
 import {
   Bubble,
   GiftedChat,
@@ -240,15 +244,16 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
   const [messages, setMessages] = useState([]);
   const [debugMode, setDebugMode] = useState(false);
 
+  // --- UI & NAVIGATION EFFECTS ---
   useLayoutEffect(() => {
     navigation.setOptions({
       title: name || 'Chat',
-      headerStyle: {
-        backgroundColor: selectedColor,
-      },
+      headerStyle: { backgroundColor: selectedColor },
       headerTintColor: '#FFFFFF',
     });
   }, [navigation, name, selectedColor]);
+
+  // --- CACHING FUNCTIONS ---
 
   const loadCachedMessages = async () => {
     try {
@@ -283,6 +288,7 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
     }
   };
 
+  // --- FIRESTORE / REAL-TIME MESSAGING ---
   useEffect(() => {
     loadCachedMessages();
 
@@ -293,6 +299,7 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
       const fetchedMessages = snapshot.docs.map(doc => ({
         _id: doc.id,
         text: doc.data().text,
+        image: doc.data().image || null,
         createdAt: doc.data().createdAt.toDate(),
         user: doc.data().user,
       }));
@@ -306,7 +313,6 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
   }, [db]);
 
   const onSend = useCallback((messagesToSend = []) => {
-    // If offline, show alert and don't send
     if (!isConnected) {
       Alert.alert("Offline", "You are currently offline. Message will be sent when connection is restored.");
       return;
@@ -317,12 +323,9 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
         await addDoc(collection(db, 'messages'), {
           text: message.text,
           createdAt: new Date(),
-          user: {
-            _id: userId,
-            name: name,
-          },
+          user: { _id: userId, name: name },
         });
-        console.log("Message successfully sent to Firebase!");
+        console.log("Text message successfully sent to Firebase!");
       } catch (error) {
         console.error("Error sending message to Firestore: ", error);
         Alert.alert("Error", "Failed to send message.");
@@ -330,113 +333,183 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
     });
   }, [db, name, userId, isConnected]);
 
-  const renderBubble = (props) => {
-    return (
-      <Bubble
-        {...props}
-        wrapperStyle={{
-          right: {
-            backgroundColor: "#007AFF",
-          },
-          left: {
-            backgroundColor: "#FFFFFF",
-          }
-        }}
-      />
-    );
+  // --- MEDIA HANDLERS ---
+
+  const uploadAndSendMedia = async (uri) => {
+    if (!isConnected) {
+      Alert.alert("Offline", "Cannot send media while offline.");
+      return;
+    }
+
+    const uniqueFileName = `${userId}-${Date.now()}.jpg`;
+
+    try {
+      Alert.alert("Uploading...", "Please wait while your media is being sent.");
+      
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      
+      const storage = getStorage(db.app);
+      const storageRef = ref(storage, uniqueFileName);
+      
+      await uploadBytes(storageRef, blob);
+      const imageURL = await getDownloadURL(storageRef);
+
+      await addDoc(collection(db, 'messages'), {
+        text: '',
+        createdAt: new Date(),
+        user: { _id: userId, name: name },
+        image: imageURL,
+      });
+
+      console.log("Media successfully sent to Firebase!");
+      Alert.alert("Success", "Media sent!");
+    } catch (error) {
+      console.error("Error uploading or sending media:", error);
+      Alert.alert("Error", "Failed to send media. Check console for details.");
+    }
+  };
+
+  const pickImage = async () => {
+    let permissions = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (permissions?.granted) {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.5,
+      });
+
+      if (!result.canceled) {
+        await uploadAndSendMedia(result.assets[0].uri);
+      }
+    } else {
+      Alert.alert("Permission Denied", "We need access to your photo library to send images.");
+    }
+  };
+
+  const takePhoto = async () => {
+    let permissions = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (permissions?.granted) {
+      let result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.5,
+      });
+
+      if (!result.canceled) {
+        await uploadAndSendMedia(result.assets[0].uri);
+      }
+    } else {
+      Alert.alert("Permission Denied", "We need camera access to take a photo.");
+    }
+  };
+
+  // --- GIFTDED CHAT RENDER CUSTOMIZATIONS ---
+
+  const renderBubble = (props) => (
+    <Bubble
+      {...props}
+      wrapperStyle={{
+        right: { backgroundColor: "#007AFF" },
+        left: { backgroundColor: "#FFFFFF" }
+      }}
+    />
+  );
+
+  const renderMessageImage = (props) => {
+    if (props.currentMessage.image) {
+      return (
+        <Image
+          style={styles.messageImage}
+          source={{ uri: props.currentMessage.image }}
+        />
+      );
+    }
+    return null;
   };
 
   const renderInputToolbar = (props) => {
-    // Don't render input toolbar if offline
     if (!isConnected) {
-      return null;
+      return null; // Hide input if offline
     }
-    
+
     return (
       <InputToolbar
         {...props}
-        containerStyle={{
-          backgroundColor: '#FFFFFF',
-          elevation: 0,
-        }}
-        textInputStyle={{
-          color: '#000000',
-        }}
+        containerStyle={styles.inputToolbarContainer}
+        textInputStyle={styles.inputToolbarText}
       />
     );
   };
 
-  const renderActions = (props) => {
-    return (
-      <View style={styles.actionContainer}>
-        <TouchableOpacity
-          accessible={true}
-          accessibilityLabel="More options"
-          accessibilityHint="Lets you choose to send an image or your geolocation."
-          accessibilityRole="button"
-          onPress={() => {
-            Alert.alert(
-              "More Options",
-              "Choose to send an image or your geolocation.",
-              [
-                { text: "Image", onPress: () => console.log("Send Image Pressed") },
-                { text: "Geolocation", onPress: () => console.log("Send Geolocation Pressed") },
-                { text: "Cancel", style: "cancel" }
-              ]
-            );
-          }}
-          style={styles.actionButton}
-        >
-          <View>
-            <Text style={styles.actionButtonText}>+</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          accessible={true}
-          accessibilityLabel="Clear messages cache"
-          accessibilityHint="Clears all local messages stored on the device."
-          accessibilityRole="button"
-          onPress={clearCache}
-          style={styles.actionButton}
-        >
-          <View>
-            <Text style={styles.actionButtonText}>-</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          accessible={true}
-          accessibilityLabel="Toggle debug mode"
-          accessibilityHint="Shows detailed network information for debugging."
-          accessibilityRole="button"
-          onPress={() => setDebugMode(!debugMode)}
-          style={[styles.actionButton, { backgroundColor: '#FF6B35' }]}
-        >
-          <View>
-            <Text style={styles.actionButtonText}>D</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const renderActions = (props) => (
+    <View style={styles.actionContainer}>
+      <TouchableOpacity
+        accessible={true}
+        accessibilityLabel="More options"
+        accessibilityHint="Opens options to send an image, take a photo, or send geolocation."
+        accessibilityRole="button"
+        onPress={() => {
+          Alert.alert(
+            "Send Media",
+            "Choose a source for your media.",
+            [
+              { text: "Take Photo", onPress: takePhoto },
+              { text: "Pick from Library", onPress: pickImage },
+              { text: "Geolocation", onPress: () => Alert.alert("Feature", "Geolocation feature coming soon!") },
+              { text: "Cancel", style: "cancel" }
+            ]
+          );
+        }}
+        style={styles.actionButton}
+      >
+        <Text style={styles.actionButtonText}>+</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        accessible={true}
+        accessibilityLabel="Clear messages cache"
+        accessibilityHint="Clears all local messages stored on the device."
+        accessibilityRole="button"
+        onPress={clearCache}
+        style={styles.actionButton}
+      >
+        <Text style={styles.actionButtonText}>-</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        accessible={true}
+        accessibilityLabel="Toggle debug mode"
+        accessibilityHint="Shows detailed network information for debugging."
+        accessibilityRole="button"
+        onPress={() => setDebugMode(!debugMode)}
+        style={[styles.actionButton, { backgroundColor: '#FF6B35' }]}
+      >
+        <Text style={styles.actionButtonText}>D</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
-  // Function to get network status display text
+  // --- NETWORK STATUS DISPLAY ---
+
   const getNetworkStatus = () => {
     if (debugMode) {
       return `Debug: useNetInfo=${rawNetInfo?.isConnected}, effective=${isConnected}`;
     }
-    
     if (isConnected === null) return 'Checking connection...';
     if (isConnected === false) return 'Offline - Messages cached locally';
     return `Online (${connectionType || 'unknown'})`;
   };
 
-  // Function to get network status color
   const getNetworkStatusColor = () => {
     if (isConnected === null) return '#FFA500'; // Orange for checking
     if (isConnected === false) return '#FF4444'; // Red for offline
     return '#00AA00'; // Green for online
   };
 
+  // --- MAIN RENDER ---
   return (
     <View style={styles.container}>
       <ImageBackground
@@ -446,18 +519,16 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
       >
         {/* Network Status Bar */}
         <View style={[styles.networkStatusBar, { backgroundColor: getNetworkStatusColor() }]}>
-          <Text style={styles.networkStatusText}>
-            {getNetworkStatus()}
-          </Text>
+          <Text style={styles.networkStatusText}>{getNetworkStatus()}</Text>
           {debugMode && (
-            <Text style={[styles.networkStatusText, { fontSize: 10, marginTop: 2 }]}>
+            <Text style={[styles.networkStatusText, styles.debugDetailText]}>
               Type: {rawNetInfo?.type} | Details: {rawNetInfo?.details?.ssid || 'N/A'}
             </Text>
           )}
         </View>
 
         <KeyboardAvoidingView
-          style={{ flex: 1 }}
+          style={styles.keyboardAvoidingView}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <GiftedChat
@@ -467,6 +538,7 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
             placeholder={isConnected ? "Type a message..." : "You are offline"}
             renderUsernameOnMessage={true}
             renderBubble={renderBubble}
+            renderMessageImage={renderMessageImage}
             renderActions={renderActions}
             renderInputToolbar={renderInputToolbar}
             keyboardShouldPersistTaps="always"
@@ -479,9 +551,13 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
   );
 };
 
+// --- STYLESHEET ---
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  keyboardAvoidingView: {
+    flex: 1
   },
   backgroundImage: {
     flex: 1,
@@ -499,6 +575,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  debugDetailText: {
+    fontSize: 10,
+    marginTop: 2
   },
   actionContainer: {
     flexDirection: 'row',
@@ -521,6 +601,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
+  inputToolbarContainer: {
+    backgroundColor: '#FFFFFF',
+    elevation: 0,
+  },
+  inputToolbarText: {
+    color: '#000000',
+  },
+  messageImage: {
+    width: 150,
+    height: 100,
+    borderRadius: 13,
+    margin: 3
+  }
 });
 
 export default Chat;
