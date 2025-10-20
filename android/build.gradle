@@ -2,8 +2,16 @@
 
 buildscript {
   ext {
-      // Set a stable, modern Kotlin version compatible with recent Expo SDKs
-      kotlinVersion = '1.8.20'
+    // CRITICAL: These build versions are required by Expo plugins
+    // to apply their configuration correctly.
+    buildToolsVersion = "34.0.0" 
+    minSdkVersion = 24 
+    compileSdkVersion = 34
+    targetSdkVersion = 34
+    
+    // Set a stable, modern Kotlin version compatible with recent Expo SDKs
+    // This fixed the previous 'compileDebugKotlin' failure.
+    kotlinVersion = '1.8.20'
   }
   repositories {
     google()
@@ -12,7 +20,8 @@ buildscript {
   dependencies {
     classpath('com.android.tools.build:gradle')
     classpath('com.facebook.react:react-native-gradle-plugin')
-    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+    // Ensure the Kotlin plugin uses the version defined above
+    classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}") 
   }
 }
 
