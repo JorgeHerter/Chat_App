@@ -1,15 +1,6 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-  ext {
-    // CRITICAL: We are removing explicit SDK version definitions 
-    // (buildToolsVersion, minSdkVersion, etc.) to stop the conflict 
-    // with the 'expo-root-project' plugin.
-    
-    // Set a stable, modern Kotlin version. Trying 1.7.10 as a known stable 
-    // version for recent React Native/Expo SDKs.
-    kotlinVersion = '1.7.10'
-  }
   repositories {
     google()
     mavenCentral()
