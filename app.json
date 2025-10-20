@@ -43,14 +43,6 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "kotlinVersion": "1.9.0"
-          }
-        }
-      ],
       "expo-web-browser",
       "react-native-edge-to-edge",
       "expo-router"
