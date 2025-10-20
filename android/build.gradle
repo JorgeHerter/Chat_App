@@ -10,7 +10,7 @@ buildscript {
     targetSdkVersion = 34
     
     // Set a stable, modern Kotlin version compatible with recent Expo SDKs
-    kotlinVersion = '1.8.20'
+    kotlinVersion = '1.6.21'
   }
   repositories {
     google()
