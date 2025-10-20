@@ -2,15 +2,13 @@
 
 buildscript {
   ext {
-    // CRITICAL: These build versions are required by Expo plugins
-    // to apply their configuration correctly.
-    buildToolsVersion = "34.0.0" 
-    minSdkVersion = 24 
-    compileSdkVersion = 34
-    targetSdkVersion = 34
+    // CRITICAL: We are removing explicit SDK version definitions 
+    // (buildToolsVersion, minSdkVersion, etc.) to stop the conflict 
+    // with the 'expo-root-project' plugin.
     
-    // Set a stable, modern Kotlin version compatible with recent Expo SDKs
-    kotlinVersion = '1.6.21'
+    // Set a stable, modern Kotlin version. Trying 1.7.10 as a known stable 
+    // version for recent React Native/Expo SDKs.
+    kotlinVersion = '1.7.10'
   }
   repositories {
     google()
