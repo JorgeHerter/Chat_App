@@ -10,7 +10,6 @@ buildscript {
     targetSdkVersion = 34
     
     // Set a stable, modern Kotlin version compatible with recent Expo SDKs
-    // This fixed the previous 'compileDebugKotlin' failure.
     kotlinVersion = '1.8.20'
   }
   repositories {
