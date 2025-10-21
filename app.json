@@ -8,10 +8,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "chatapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
-      
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "The app accesses your photos to let you choose an image to send in the chat."
       }
@@ -43,9 +42,16 @@
           "backgroundColor": "#ffffff"
         }
       ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.24"
+          }
+        }
+      ],
       "expo-web-browser",
       "react-native-edge-to-edge"
-      
     ],
     "extra": {
       "eas": {
