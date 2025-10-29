@@ -8,11 +8,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "chatapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "The app accesses your photos to let you choose an image to send in the chat."
+        "NSPhotoLibraryUsageDescription": "The app accesses your photos to let you choose an image to send in the chat.",
+        "NSCameraUsageDescription": "The app accesses your camera to let you take photos to send in the chat."
       }
     },
     "android": {
@@ -21,7 +21,13 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.jorgeherter.ChatApp"
+      "package": "com.jorgeherter.ChatApp",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -30,7 +36,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you choose an image to send in the chat."
+          "photosPermission": "The app accesses your photos to let you choose an image to send in the chat.",
+          "cameraPermission": "The app accesses your camera to let you take photos to send in the chat."
         }
       ],
       [

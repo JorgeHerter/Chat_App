@@ -344,16 +344,21 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
     const uniqueFileName = `${userId}-${Date.now()}.jpg`;
 
     try {
+      console.log("📤 Starting media upload...", uri);
       Alert.alert("Uploading...", "Please wait while your media is being sent.");
       
       const response = await fetch(uri);
       const blob = await response.blob();
+      console.log("📤 Blob created, size:", blob.size);
       
       const storage = getStorage(db.app);
       const storageRef = ref(storage, uniqueFileName);
       
       await uploadBytes(storageRef, blob);
+      console.log("📤 Uploaded to storage");
+      
       const imageURL = await getDownloadURL(storageRef);
+      console.log("📤 Got download URL:", imageURL);
 
       await addDoc(collection(db, 'messages'), {
         text: '',
@@ -362,51 +367,83 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
         image: imageURL,
       });
 
-      console.log("Media successfully sent to Firebase!");
+      console.log("✅ Media successfully sent to Firebase!");
       Alert.alert("Success", "Media sent!");
     } catch (error) {
-      console.error("Error uploading or sending media:", error);
+      console.error("❌ Error uploading or sending media:", error);
       Alert.alert("Error", "Failed to send media. Check console for details.");
     }
   };
 
   const pickImage = async () => {
-    let permissions = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    console.log("📸 pickImage called");
+    
+    try {
+      let permissions = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log("📸 Permissions result:", permissions);
 
-    if (permissions?.granted) {
-      let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.5,
-      });
+      if (permissions?.granted) {
+        console.log("📸 Permission granted, launching picker...");
+        
+        let result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.5,
+        });
 
-      if (!result.canceled) {
-        await uploadAndSendMedia(result.assets[0].uri);
+        console.log("📸 Picker result:", result);
+
+        if (!result.canceled) {
+          console.log("📸 Image selected:", result.assets[0].uri);
+          await uploadAndSendMedia(result.assets[0].uri);
+        } else {
+          console.log("📸 User canceled picker");
+        }
+      } else {
+        console.log("❌ Permission denied");
+        Alert.alert("Permission Denied", "We need access to your photo library to send images.");
       }
-    } else {
-      Alert.alert("Permission Denied", "We need access to your photo library to send images.");
+    } catch (error) {
+      console.error("❌ Error in pickImage:", error);
+      Alert.alert("Error", "Failed to pick image. Check console for details.");
     }
   };
 
   const takePhoto = async () => {
-    let permissions = await ImagePicker.requestCameraPermissionsAsync();
+    console.log("📷 takePhoto called");
+    
+    try {
+      let permissions = await ImagePicker.requestCameraPermissionsAsync();
+      console.log("📷 Camera permissions result:", permissions);
 
-    if (permissions?.granted) {
-      let result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.5,
-      });
+      if (permissions?.granted) {
+        console.log("📷 Permission granted, launching camera...");
+        
+        let result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.5,
+        });
 
-      if (!result.canceled) {
-        await uploadAndSendMedia(result.assets[0].uri);
+        console.log("📷 Camera result:", result);
+
+        if (!result.canceled) {
+          console.log("📷 Photo taken:", result.assets[0].uri);
+          await uploadAndSendMedia(result.assets[0].uri);
+        } else {
+          console.log("📷 User canceled camera");
+        }
+      } else {
+        console.log("❌ Camera permission denied");
+        Alert.alert("Permission Denied", "We need camera access to take a photo.");
       }
-    } else {
-      Alert.alert("Permission Denied", "We need camera access to take a photo.");
+    } catch (error) {
+      console.error("❌ Error in takePhoto:", error);
+      Alert.alert("Error", "Failed to take photo. Check console for details.");
     }
   };
 
-  // --- GIFTDED CHAT RENDER CUSTOMIZATIONS ---
+  // --- GIFTED CHAT RENDER CUSTOMIZATIONS ---
 
   const renderBubble = (props) => (
     <Bubble
@@ -452,14 +489,33 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
         accessibilityHint="Opens options to send an image, take a photo, or send geolocation."
         accessibilityRole="button"
         onPress={() => {
+          console.log("➕ + button pressed");
           Alert.alert(
             "Send Media",
             "Choose a source for your media.",
             [
-              { text: "Take Photo", onPress: takePhoto },
-              { text: "Pick from Library", onPress: pickImage },
-              { text: "Geolocation", onPress: () => Alert.alert("Feature", "Geolocation feature coming soon!") },
-              { text: "Cancel", style: "cancel" }
+              { 
+                text: "Take Photo", 
+                onPress: () => {
+                  console.log("📷 Take Photo selected from menu");
+                  takePhoto();
+                }
+              },
+              { 
+                text: "Pick from Library", 
+                onPress: () => {
+                  console.log("📸 Pick from Library selected from menu");
+                  pickImage();
+                }
+              },
+              { 
+                text: "Geolocation", 
+                onPress: () => {
+                  console.log("📍 Geolocation selected");
+                  Alert.alert("Feature", "Geolocation feature coming soon!");
+                }
+              },
+              { text: "Cancel", style: "cancel", onPress: () => console.log("❌ Menu canceled") }
             ]
           );
         }}
@@ -473,7 +529,10 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
         accessibilityLabel="Clear messages cache"
         accessibilityHint="Clears all local messages stored on the device."
         accessibilityRole="button"
-        onPress={clearCache}
+        onPress={() => {
+          console.log("🗑️ Clear cache button pressed");
+          clearCache();
+        }}
         style={styles.actionButton}
       >
         <Text style={styles.actionButtonText}>-</Text>
@@ -484,10 +543,24 @@ const Chat = ({ route, db, auth, userId, isConnected, connectionType, rawNetInfo
         accessibilityLabel="Toggle debug mode"
         accessibilityHint="Shows detailed network information for debugging."
         accessibilityRole="button"
-        onPress={() => setDebugMode(!debugMode)}
+        onPress={() => {
+          console.log("🐛 Debug mode toggled:", !debugMode);
+          setDebugMode(!debugMode);
+        }}
         style={[styles.actionButton, { backgroundColor: '#FF6B35' }]}
       >
         <Text style={styles.actionButtonText}>D</Text>
+      </TouchableOpacity>
+      
+      {/* Direct test button for image picker */}
+      <TouchableOpacity
+        onPress={() => {
+          console.log("🎯 Direct image picker button pressed");
+          pickImage();
+        }}
+        style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
+      >
+        <Text style={styles.actionButtonText}>📷</Text>
       </TouchableOpacity>
     </View>
   );

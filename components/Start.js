@@ -185,14 +185,13 @@ const Start = ({ navigation, auth }) => {
 export default Start;*/
 import { useState } from 'react';
 import {
-  Alert, // Import Alert for better UX
-  Image,
+  Alert,
   ImageBackground,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 import * as ImagePicker from 'expo-image-picker'; // Import ImagePicker
@@ -304,42 +303,6 @@ const Start = ({ navigation, isConnected, connectionType }) => {
             ))}
           </View>
           
-          {/* New Media Buttons */}
-          <View style={styles.mediaContainer}>
-            <TouchableOpacity 
-              style={[
-                styles.mediaButton, 
-                { backgroundColor: isConnected ? '#DDDDDD' : '#AAAAAA' } // Visually indicate disabled state
-              ]} 
-              onPress={pickImage}
-              disabled={!isConnected} // Disable if offline
-              accessibilityLabel="Pick an image from the library"
-            >
-              <Text style={styles.mediaButtonText}>Pick an image from the library</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[
-                styles.mediaButton, 
-                { backgroundColor: isConnected ? '#DDDDDD' : '#AAAAAA' }
-              ]} 
-              onPress={takePhoto}
-              disabled={!isConnected} // Disable if offline
-              accessibilityLabel="Take a photo (currently disabled)"
-            >
-              <Text style={styles.mediaButtonText}>Take a photo</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Conditional Image Display */}
-          {image && (
-            <Image 
-              source={{ uri: image.uri }} 
-              style={styles.previewImage} 
-              accessibilityLabel="Preview of selected image"
-            />
-          )}
-
           <TouchableOpacity style={[styles.button, { backgroundColor: selectedColor }]} onPress={handleStartChat}>
             <Text style={styles.buttonText}>Start Chatting</Text>
           </TouchableOpacity>
